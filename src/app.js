@@ -32,6 +32,13 @@ app.use(
 app.use(helmet());
 
 // 3. CORS Configuration
+app.use((req, res, next) => {
+  if (req.headers["access-control-request-private-network"]) {
+    res.setHeader("Access-Control-Allow-Private-Network", "true");
+  }
+  next();
+});
+
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || "*",
