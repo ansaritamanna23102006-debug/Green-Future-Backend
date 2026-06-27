@@ -15,7 +15,7 @@ export const protect = async (req, res, next) => {
       token = req.headers.authorization.split(" ")[1];
     }
 
-    if (!token) {
+    if (!token || token === "null" || token === "undefined") {
       return next(
         new AppError("You are not logged in. Please log in to gain access.", 401)
       );
@@ -42,6 +42,12 @@ export const protect = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+    if (error.name === "JsonWebTokenError") {
+      return next(new AppError("Invalid or malformed token. Please log in again.", 401));
+    }
+    if (error.name === "TokenExpiredError") {
+      return next(new AppError("Your session token has expired. Please log in again.", 401));
+    }
     next(error);
   }
 };
