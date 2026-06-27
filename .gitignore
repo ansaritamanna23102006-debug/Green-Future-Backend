@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# Local Environment variables
+.env
+
+# Application Logs
+logs/*.log
+logs/
+
+# Local uploaded files
+uploads/*
+!uploads/.gitkeep
