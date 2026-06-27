@@ -82,6 +82,14 @@ app.get("/api/v1/health", (req, res) => {
   });
 });
 
+// Root path handler
+app.get("/", (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "Welcome to the Green Future Tech API server. Navigate to /api/v1/health for detailed status.",
+  });
+});
+
 // 9. Unmapped Routes Handler
 app.all("*", (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
