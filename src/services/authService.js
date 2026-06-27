@@ -130,11 +130,13 @@ class AuthService {
     };
   }
 
-  /**
-   * Log in user, compare password and return tokens.
-   */
-  async login(email, password) {
-    const user = await User.findOne({ email });
+  async login(emailOrUserId, password) {
+    const user = await User.findOne({
+      $or: [
+        { email: emailOrUserId.toLowerCase() },
+        { userId: emailOrUserId.toUpperCase() },
+      ],
+    });
     if (!user) {
       throw new AppError("Invalid credentials", 401);
     }
