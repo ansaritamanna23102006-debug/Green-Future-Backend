@@ -83,7 +83,7 @@ app.get("/api/v1/health", (req, res) => {
 });
 
 // Root path handler
-app.get("/", (req, res) => {
+app.all("/", (req, res) => {
   res.status(200).json({
     status: "success",
     message: "Welcome to the Green Future Tech API server. Navigate to /api/v1/health for detailed status.",
