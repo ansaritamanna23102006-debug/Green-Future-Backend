@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
@@ -102,7 +103,7 @@ const userSchema = new Schema(
     emailVerificationToken: String,
     passwordResetToken: String,
     passwordResetExpires: Date,
-    
+
     // Nominee Information
     nominee: {
       name: { type: String, default: "" },
@@ -158,7 +159,7 @@ const userSchema = new Schema(
     rightLegSalesVolume: { type: Number, default: 0 },
     leftLegActiveUsers: { type: Number, default: 0 },
     rightLegActiveUsers: { type: Number, default: 0 },
-    
+
     // Temporary variables for weekly calculation
     leftLegCarryForward: { type: Number, default: 0 },
     rightLegCarryForward: { type: Number, default: 0 },
