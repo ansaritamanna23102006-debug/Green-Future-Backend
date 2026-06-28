@@ -7,6 +7,7 @@ import {
   getAuditLogs,
   getSystemLogFiles,
   triggerBinaryMatchingCalculation,
+  getTokenSupplyMetrics,
 } from "../controllers/superadminController.js";
 import { protect, restrictTo } from "../middlewares/auth.js";
 
@@ -25,5 +26,6 @@ router.get("/audit-logs", getAuditLogs);
 router.get("/system-logs", getSystemLogFiles);
 
 router.post("/trigger-payouts", triggerBinaryMatchingCalculation);
+router.get("/token-supply", getTokenSupplyMetrics);
 
 export default router;

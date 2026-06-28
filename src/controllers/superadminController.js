@@ -146,3 +146,27 @@ export const triggerBinaryMatchingCalculation = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getTokenSupplyMetrics = async (req, res, next) => {
+  try {
+    const { default: tokenSupplyService } = await import("../services/tokenSupplyService.js");
+    const supply = await tokenSupplyService.getSupply();
+    
+    const activeIds = await User.countDocuments({ role: "user", status: "active" });
+    const inactiveIds = await User.countDocuments({ role: "user", status: "inactive" });
+    
+    return successResponse(res, {
+      totalSupply: supply.totalSupply,
+      availableSupply: supply.availableSupply,
+      reservedTokens: supply.reservedTokens,
+      distributedBonuses: supply.distributedBonuses,
+      returnedTokens: supply.returnedTokens,
+      totalWithdrawalsINR: supply.totalWithdrawalsINR,
+      totalWithdrawalsUSDT: supply.totalWithdrawalsUSDT,
+      activeIds,
+      inactiveIds
+    }, "Token supply metrics fetched successfully");
+  } catch (error) {
+    next(error);
+  }
+};

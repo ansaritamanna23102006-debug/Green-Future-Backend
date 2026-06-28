@@ -70,6 +70,10 @@ class WalletService {
       };
       await user.save();
 
+      // Reserve GFT tokens equal to investment amount
+      const { default: tokenSupplyService } = await import("./tokenSupplyService.js");
+      await tokenSupplyService.reserveTokens(pkg.price);
+
       // Add Sales Volume to upline leg accumulators
       await GenealogyService.addSalesVolume(user.userId, pkg.price);
 
@@ -201,6 +205,11 @@ class WalletService {
       withdrawal.txHash = txHash;
       withdrawal.processedAt = new Date();
       await withdrawal.save();
+
+      // Record withdrawal in supply stats
+      const { default: tokenSupplyService } = await import("./tokenSupplyService.js");
+      const isUSDT = withdrawal.paymentMethod === "USDT_WALLET" || withdrawal.paymentMethod === "USDT";
+      await tokenSupplyService.recordWithdrawal(withdrawal.amount, isUSDT ? "USDT" : "INR");
 
       const wallet = await Wallet.findOne({ userId: withdrawal.userId });
       if (wallet) {

@@ -49,13 +49,21 @@ export const updateUserStatus = async (req, res, next) => {
       throw new AppError("Invalid status value", 400);
     }
 
-    const user = await User.findOneAndUpdate(
-      { userId },
-      { status },
-      { new: true }
-    ).select("-password");
-
+    const user = await User.findOne({ userId });
     if (!user) throw new AppError("User not found", 404);
+
+    const oldStatus = user.status;
+    user.status = status;
+    await user.save();
+
+    // If status changed from active to inactive/suspended, release reserved tokens
+    if (oldStatus === "active" && (status === "inactive" || status === "suspended")) {
+      const amt = user.activePackage?.amount || 0;
+      if (amt > 0) {
+        const { default: tokenSupplyService } = await import("../services/tokenSupplyService.js");
+        await tokenSupplyService.returnTokens(amt);
+      }
+    }
 
     await AuditLog.create({
       userId: req.user.userId,

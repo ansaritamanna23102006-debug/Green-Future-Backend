@@ -63,6 +63,31 @@ export const initCronJobs = () => {
       logger.error(`[CRON ERROR] Expire offers check failed: ${err.message}`);
     }
   });
+
+  // 6. Expire packages and return tokens (Every day at 03:00 AM)
+  cron.schedule("0 3 * * *", async () => {
+    try {
+      logger.info("[CRON] Running expired package/ID status sweep...");
+      const { default: tokenSupplyService } = await import("../services/tokenSupplyService.js");
+      const User = (await import("../models/User.js")).default;
+      const now = new Date();
+      const expiredUsers = await User.find({
+        status: "active",
+        "activePackage.expiresAt": { $lte: now }
+      });
+      for (const u of expiredUsers) {
+        u.status = "inactive";
+        const amt = u.activePackage?.amount || 0;
+        if (amt > 0) {
+          await tokenSupplyService.returnTokens(amt);
+        }
+        await u.save();
+        logger.info(`[CRON] Deactivated expired user ID ${u.userId} and returned ${amt} GFT tokens to supply`);
+      }
+    } catch (err) {
+      logger.error(`[CRON ERROR] Expired package status sweep failed: ${err.message}`);
+    }
+  });
 };
 
 export default initCronJobs;

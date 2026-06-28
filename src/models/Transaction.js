@@ -58,5 +58,24 @@ const transactionSchema = new mongoose.Schema(
   }
 );
 
+transactionSchema.post("save", async function (doc) {
+  try {
+    if (doc.type === "credit" && doc.status === "completed") {
+      const bonusCategories = [
+        "direct_income",
+        "binary_matching",
+        "passive_yield",
+        "global_pool",
+      ];
+      if (bonusCategories.includes(doc.category)) {
+        const { default: tokenSupplyService } = await import("../services/tokenSupplyService.js");
+        await tokenSupplyService.distributeBonus(doc.amount);
+      }
+    }
+  } catch (err) {
+    console.error("Error in Transaction post-save hook:", err);
+  }
+});
+
 const Transaction = mongoose.model("Transaction", transactionSchema);
 export default Transaction;
