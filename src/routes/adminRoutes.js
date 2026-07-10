@@ -14,6 +14,7 @@ import {
   editUser,
   deleteUser,
 } from "../controllers/adminController.js";
+import { getTokenSupplyMetrics } from "../controllers/superadminController.js";
 import { protect, restrictTo } from "../middlewares/auth.js";
 import upload from "../middlewares/upload.js";
 
@@ -30,6 +31,7 @@ router.post("/kyc/review", reviewKyc);
 
 router.get("/withdrawals", getAllWithdrawals);
 router.post("/withdrawals/review", updateWithdrawalStatus);
+router.get("/token-supply", getTokenSupplyMetrics);
 
 router.get("/tickets", getSupportTickets);
 router.post("/tickets/reply", replySupportTicket);
