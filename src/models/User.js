@@ -100,9 +100,27 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    isMobileVerified: {
+      type: Boolean,
+      default: false,
+    },
     emailVerificationToken: String,
     passwordResetToken: String,
     passwordResetExpires: Date,
+    passwordResetAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lastLoginAt: Date,
+    activeDevices: [
+      {
+        deviceId: { type: String, default: "" },
+        ip: { type: String, default: "" },
+        userAgent: { type: String, default: "" },
+        refreshTokenHash: { type: String, default: "" },
+        lastActive: { type: Date, default: Date.now },
+      },
+    ],
 
     // Nominee Information
     nominee: {
@@ -111,22 +129,57 @@ const userSchema = new Schema(
       mobile: { type: String, default: "" },
     },
 
-    // KYC Status & Documents
+    // KYC Status & Documents (Phase 2 Standardized)
     kyc: {
       status: {
         type: String,
-        enum: ["not_submitted", "pending", "approved", "rejected"],
-        default: "not_submitted",
+        enum: [
+          "NOT_STARTED",
+          "DRAFT",
+          "SUBMITTED",
+          "UNDER_REVIEW",
+          "APPROVED",
+          "REJECTED",
+          "RESUBMISSION_REQUIRED",
+          // Backward compatibility mappings
+          "not_submitted",
+          "pending",
+          "approved",
+          "rejected",
+        ],
+        default: "NOT_STARTED",
+        index: true,
       },
-      rejectReason: { type: String, default: "" },
-      aadhaarNumber: { type: String, default: "" },
-      panNumber: { type: String, default: "" },
+      aadhaarNumber: { type: String, default: "" }, // Masked value
+      panNumber: { type: String, default: "" },     // Masked value
+      documents: {
+        aadhaarFront: { fileName: String, originalName: String, mimeType: String, size: Number, uploadedAt: Date },
+        aadhaarBack: { fileName: String, originalName: String, mimeType: String, size: Number, uploadedAt: Date },
+        panCard: { fileName: String, originalName: String, mimeType: String, size: Number, uploadedAt: Date },
+        bankPassbook: { fileName: String, originalName: String, mimeType: String, size: Number, uploadedAt: Date },
+      },
+      flaggedDocuments: [{ type: String }], // Documents requiring replacement on RESUBMISSION_REQUIRED
+      rejectionReason: { type: String, default: "" },
+      resubmissionReason: { type: String, default: "" },
+      submittedAt: Date,
+      reviewedAt: Date,
+      reviewedBy: { type: String, default: "" }, // Admin userId
+      history: [
+        {
+          action: String,
+          previousStatus: String,
+          newStatus: String,
+          changedBy: String,
+          reason: String,
+          timestamp: { type: Date, default: Date.now },
+        },
+      ],
+      // Compatibility fields preserved
       aadhaarFrontUrl: { type: String, default: "" },
       aadhaarBackUrl: { type: String, default: "" },
       panUrl: { type: String, default: "" },
       passbookUrl: { type: String, default: "" },
-      submittedAt: Date,
-      reviewedAt: Date,
+      rejectReason: { type: String, default: "" },
     },
 
     // Bank Details
@@ -147,12 +200,28 @@ const userSchema = new Schema(
 
     // Active Eco package details
     activePackage: {
-      packageId: { type: Schema.Types.ObjectId, ref: "Package" },
+      packageId: { type: Schema.Types.Mixed },
+      packageKey: { type: String, default: "" },
       name: { type: String, default: "" },
       amount: { type: Number, default: 0 },
-      activatedAt: Date,
-      expiresAt: Date,
+      currency: { type: String, default: "INR" },
+      orderId: { type: String, default: "" },
+      activatedAt: { type: Date, default: null },
+      expiresAt: { type: Date, default: null },
+      status: { type: String, default: "INACTIVE" },
     },
+    packageHistory: [
+      {
+        packageKey: { type: String },
+        orderId: { type: String },
+        name: { type: String },
+        amount: { type: Number },
+        currency: { type: String, default: "INR" },
+        activatedAt: { type: Date, default: Date.now },
+        expiresAt: { type: Date },
+        status: { type: String, default: "ACTIVATED" },
+      },
+    ],
 
     // Binary Tree Statistics Accumulators (For matching & commission algorithms)
     leftLegSalesVolume: { type: Number, default: 0 },

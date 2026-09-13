@@ -4,13 +4,24 @@ import Transaction from "../models/Transaction.js";
 import Settings from "../models/Settings.js";
 import Package from "../models/Package.js";
 import logger from "../config/logger.js";
+import { assertRuleExecutable } from "../utils/rules/businessPlanConfig.js";
 
+/**
+ * IncomeService (Phase 4: Gated Legacy Calculation Service)
+ * 
+ * IMPORTANT:
+ * - All income calculations remain strictly gated under Phase 0 assertRuleExecutable.
+ * - Because all rules are REQUIRES_CLIENT_CONFIRMATION, all methods throw and abort.
+ * - No live direct wallet mutations can occur.
+ */
 class IncomeService {
   /**
    * Calculates and pays Direct Referral Income.
-   * 10% of purchased package value is paid to the sponsor.
+   * Gated: Requires confirmed direct referral rule.
    */
   async payDirectIncome(buyerUserId, packagePrice) {
+    assertRuleExecutable("ref_l1");
+
     try {
       const buyer = await User.findOne({ userId: buyerUserId });
       if (!buyer || buyer.sponsorId === "none") return;
@@ -18,7 +29,7 @@ class IncomeService {
       const sponsor = await User.findOne({ userId: buyer.sponsorId });
       if (!sponsor) return;
 
-      const settings = await Settings.findOne({ key: "global_settings" }) || { directIncomePercentage: 10 };
+      const settings = (await Settings.findOne({ key: "global_settings" })) || { directIncomePercentage: 10 };
       const commissionAmount = (packagePrice * settings.directIncomePercentage) / 100;
 
       // Update Sponsor's Wallet
@@ -29,7 +40,6 @@ class IncomeService {
         await wallet.save();
       }
 
-      // Log Transaction
       await Transaction.create({
         user: sponsor._id,
         userId: sponsor.userId,
@@ -50,14 +60,15 @@ class IncomeService {
 
   /**
    * Runs the Binary Matching Commission calculation.
-   * Matches leftLegSalesVolume and rightLegSalesVolume (12% matching rate).
-   * Differentiates matches, calculates carry forward, checks package capping, and records.
+   * Gated: Requires confirmed binary commission rule.
    */
   async runWeeklyBinaryMatching() {
+    assertRuleExecutable("binary_commission");
+
     try {
       logger.info("Starting weekly binary matching calculations...");
       const users = await User.find({ status: "active" }).populate("activePackage.packageId");
-      const settings = await Settings.findOne({ key: "global_settings" }) || { binaryIncomePercentage: 12 };
+      const settings = (await Settings.findOne({ key: "global_settings" })) || { binaryIncomePercentage: 12 };
 
       for (const user of users) {
         const leftVol = user.leftLegSalesVolume;
@@ -65,31 +76,25 @@ class IncomeService {
 
         if (leftVol <= 0 || rightVol <= 0) continue;
 
-        // Calculate matching amount
         const matchingVolume = Math.min(leftVol, rightVol);
         let matchingIncome = (matchingVolume * settings.binaryIncomePercentage) / 100;
 
-        // Enforce Weekly Capping based on Package tier
-        let capLimit = 15000; // Default min cap
+        let capLimit = 15000;
         if (user.activePackage && user.activePackage.packageId) {
           capLimit = user.activePackage.packageId.weeklyMatchingCapping || capLimit;
         }
 
         if (matchingIncome > capLimit) {
-          logger.info(`Capped binary matching income of user ${user.userId} from ₹${matchingIncome} to limit ₹${capLimit}`);
           matchingIncome = capLimit;
         }
 
-        // Calculate carry forward remaining volumes
         const leftCarry = leftVol - matchingVolume;
         const rightCarry = rightVol - matchingVolume;
 
-        // Update User Sales Volume accumulators (reset matching portion, keep carry forward)
         user.leftLegSalesVolume = leftCarry;
         user.rightLegSalesVolume = rightCarry;
         await user.save();
 
-        // Credit matching income to Wallet
         const wallet = await Wallet.findOne({ userId: user.userId });
         if (wallet) {
           wallet.incomeWallet += matchingIncome;
@@ -97,7 +102,6 @@ class IncomeService {
           await wallet.save();
         }
 
-        // Log Transaction
         await Transaction.create({
           user: user._id,
           userId: user.userId,
@@ -120,9 +124,11 @@ class IncomeService {
 
   /**
    * Distributes passive token yield APY.
-   * Runs daily (or monthly) based on active package configurations.
+   * Gated: Requires confirmed self income / passive rule.
    */
   async runDailyStakingYield() {
+    assertRuleExecutable("self_income");
+
     try {
       logger.info("Calculating daily passive staking yields...");
       const users = await User.find({ status: "active" }).populate("activePackage.packageId");
@@ -131,7 +137,7 @@ class IncomeService {
         if (!user.activePackage || !user.activePackage.packageId) continue;
 
         const pkg = user.activePackage.packageId;
-        const dailyRate = pkg.dailyYieldRate || 0.05; // 0.05% daily
+        const dailyRate = pkg.dailyYieldRate || 0.05;
         const yieldIncome = (user.activePackage.amount * dailyRate) / 100;
 
         if (yieldIncome <= 0) continue;
@@ -165,12 +171,13 @@ class IncomeService {
 
   /**
    * Calculates monthly system sales and splits 5% turnover pool among emerald and above ranks.
+   * Gated: Requires confirmed pool turnover rule.
    */
   async distributeGlobalPool() {
+    assertRuleExecutable("pool_turnover");
+
     try {
       logger.info("Starting Global Turnover Pool distribution...");
-      
-      // Calculate total system sales volume in the past month from completed package purchases
       const oneMonthAgo = new Date();
       oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
@@ -179,15 +186,15 @@ class IncomeService {
           $match: {
             category: "package_purchase",
             status: "completed",
-            createdAt: { $gte: oneMonthAgo }
-          }
+            createdAt: { $gte: oneMonthAgo },
+          },
         },
         {
           $group: {
             _id: null,
-            totalSales: { $sum: "$amount" }
-          }
-        }
+            totalSales: { $sum: "$amount" },
+          },
+        },
       ]);
 
       const totalSales = totalSalesAgg[0] ? totalSalesAgg[0].totalSales : 0;
@@ -196,12 +203,10 @@ class IncomeService {
         return;
       }
 
-      const poolAmount = (totalSales * 5) / 100; // 5% of monthly sales
-      
-      // Eligible ranks: emerald, platinum, diamond, ruby, chairman
+      const poolAmount = (totalSales * 5) / 100;
       const eligibleUsers = await User.find({
         rank: { $in: ["emerald", "platinum", "diamond", "ruby", "chairman"] },
-        status: "active"
+        status: "active",
       });
 
       if (eligibleUsers.length === 0) {

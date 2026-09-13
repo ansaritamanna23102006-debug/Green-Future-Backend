@@ -1,5 +1,13 @@
 import mongoose from "mongoose";
 
+/**
+ * Legacy Transaction Model (Phase 4: Read-Only Historical Archive)
+ * 
+ * IMPORTANT:
+ * - The legacy post-save hook that triggered secondary token distributions has been REMOVED.
+ * - This model serves as historical archive for legacy transactions.
+ * - All authoritative new financial transactions write exclusively to JournalEntry and LedgerPosting.
+ */
 const transactionSchema = new mongoose.Schema(
   {
     user: {
@@ -10,6 +18,7 @@ const transactionSchema = new mongoose.Schema(
     userId: {
       type: String,
       required: true,
+      index: true,
     },
     amount: {
       type: Number,
@@ -58,24 +67,8 @@ const transactionSchema = new mongoose.Schema(
   }
 );
 
-transactionSchema.post("save", async function (doc) {
-  try {
-    if (doc.type === "credit" && doc.status === "completed") {
-      const bonusCategories = [
-        "direct_income",
-        "binary_matching",
-        "passive_yield",
-        "global_pool",
-      ];
-      if (bonusCategories.includes(doc.category)) {
-        const { default: tokenSupplyService } = await import("../services/tokenSupplyService.js");
-        await tokenSupplyService.distributeBonus(doc.amount);
-      }
-    }
-  } catch (err) {
-    console.error("Error in Transaction post-save hook:", err);
-  }
-});
+// Compound index for historical user lookups
+transactionSchema.index({ userId: 1, createdAt: -1 });
 
 const Transaction = mongoose.model("Transaction", transactionSchema);
 export default Transaction;

@@ -1,30 +1,43 @@
 import WalletService from "../services/walletService.js";
-import Wallet from "../models/Wallet.js";
+import ledgerService from "../services/ledgerService.js";
 import Transaction from "../models/Transaction.js";
 import Withdrawal from "../models/Withdrawal.js";
 import Package from "../models/Package.js";
 import { successResponse } from "../utils/response.js";
 import AppError from "../utils/errors.js";
 
+/**
+ * Authoritative Wallet Balances
+ * Returns integer minor units (paisa) and formatted INR display strings.
+ */
 export const getWalletBalances = async (req, res, next) => {
   try {
-    let wallet = await Wallet.findOne({ userId: req.user.userId });
-    if (!wallet) {
-      wallet = await Wallet.create({
-        user: req.user._id,
-        userId: req.user.userId,
-      });
-    }
-    return successResponse(res, wallet, "Wallet balances fetched successfully");
+    const balances = await ledgerService.getWalletBalances(req.user.userId);
+    return successResponse(res, balances, "Authoritative wallet balances fetched successfully");
   } catch (error) {
     next(error);
   }
 };
 
+/**
+ * Ledger Statement History (Phase 4 Authoritative Double-Entry History)
+ */
+export const getLedgerStatement = async (req, res, next) => {
+  try {
+    const statement = await ledgerService.getUserStatement(req.user.userId, req.query);
+    return successResponse(res, statement, "Ledger statement fetched successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Legacy Transaction History (Read-Only Historical Lookup)
+ */
 export const getTransactionHistory = async (req, res, next) => {
   try {
-    const page = parseInt(req.query.page || "1");
-    const limit = parseInt(req.query.limit || "10");
+    const page = parseInt(req.query.page || "1", 10);
+    const limit = parseInt(req.query.limit || "10", 10);
     const skip = (page - 1) * limit;
 
     const query = { userId: req.user.userId };
@@ -46,7 +59,7 @@ export const getTransactionHistory = async (req, res, next) => {
         totalPages: Math.ceil(count / limit),
         totalItems: count,
       },
-      "Transaction history fetched successfully"
+      "Historical transaction records fetched successfully"
     );
   } catch (error) {
     next(error);
@@ -55,12 +68,10 @@ export const getTransactionHistory = async (req, res, next) => {
 
 export const buyPackage = async (req, res, next) => {
   try {
-    const { packageId } = req.body;
-    if (!packageId) {
-      throw new AppError("Package ID is required", 400);
-    }
-    const result = await WalletService.purchasePackage(req.user.userId, packageId);
-    return successResponse(res, result, "Package purchased and activated successfully");
+    throw new AppError(
+      "The legacy direct package purchase endpoint has been deprecated for security and compliance. Please use the authoritative order lifecycle via POST /api/v1/orders.",
+      410
+    );
   } catch (error) {
     next(error);
   }
@@ -69,15 +80,12 @@ export const buyPackage = async (req, res, next) => {
 export const transferTokens = async (req, res, next) => {
   try {
     const { receiverUserId, amount } = req.body;
-    if (!receiverUserId || !amount) {
-      throw new AppError("Receiver user ID and transfer amount are required", 400);
-    }
     const result = await WalletService.transferTokens(
       req.user.userId,
       receiverUserId,
-      parseFloat(amount)
+      amount
     );
-    return successResponse(res, result, `Transferred ${amount} GFT tokens to user ${receiverUserId} successfully`);
+    return successResponse(res, result, "Transfer successful");
   } catch (error) {
     next(error);
   }
@@ -86,16 +94,13 @@ export const transferTokens = async (req, res, next) => {
 export const requestWithdrawal = async (req, res, next) => {
   try {
     const { amount, paymentMethod, paymentDetails } = req.body;
-    if (!amount || !paymentMethod || !paymentDetails) {
-      throw new AppError("Amount, payment method, and destination details are required", 400);
-    }
     const result = await WalletService.requestWithdrawal(
       req.user.userId,
-      parseFloat(amount),
+      amount,
       paymentMethod,
       paymentDetails
     );
-    return successResponse(res, result, "Withdrawal request submitted successfully");
+    return successResponse(res, result, "Withdrawal submitted");
   } catch (error) {
     next(error);
   }
@@ -118,4 +123,3 @@ export const getPackages = async (req, res, next) => {
     next(error);
   }
 };
-

@@ -1,6 +1,7 @@
 import express from "express";
 import {
   getWalletBalances,
+  getLedgerStatement,
   getTransactionHistory,
   buyPackage,
   transferTokens,
@@ -15,6 +16,7 @@ const router = express.Router();
 router.use(protect);
 
 router.get("/balances", getWalletBalances);
+router.get("/statement", getLedgerStatement);
 router.get("/transactions", getTransactionHistory);
 router.post("/buy-package", buyPackage);
 router.post("/transfer", transferTokens);

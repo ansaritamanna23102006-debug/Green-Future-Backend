@@ -14,10 +14,12 @@ import AppError from "./utils/errors.js";
 // Routes Imports
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import kycRoutes from "./routes/kycRoutes.js";
 import genealogyRoutes from "./routes/genealogyRoutes.js";
 import walletRoutes from "./routes/walletRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import superadminRoutes from "./routes/superadminRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
 
 const app = express();
 
@@ -88,10 +90,12 @@ app.use("/uploads", express.static(path.join("uploads")));
 // 7. API Version 1 Route Mappings
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/kyc", kycRoutes);
 app.use("/api/v1/genealogy", genealogyRoutes);
 app.use("/api/v1/wallet", walletRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/superadmin", superadminRoutes);
+app.use("/api/v1/orders", orderRoutes);
 
 // 8. Health Check Endpoint
 app.get("/api/v1/health", (req, res) => {

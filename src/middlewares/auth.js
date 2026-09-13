@@ -63,3 +63,21 @@ export const restrictTo = (...roles) => {
     next();
   };
 };
+
+// Phase 2: Reusable KYC verification gate (allows only APPROVED status)
+export const requireVerifiedKyc = (req, res, next) => {
+  if (!req.user) {
+    return next(new AppError("Authentication required.", 401));
+  }
+
+  const kycStatus = req.user.kyc ? String(req.user.kyc.status).toUpperCase() : "NOT_STARTED";
+  if (kycStatus !== "APPROVED") {
+    return next(
+      new AppError(
+        "KYC verification is required to perform this action. Please complete compliance verification in your profile.",
+        403
+      )
+    );
+  }
+  next();
+};

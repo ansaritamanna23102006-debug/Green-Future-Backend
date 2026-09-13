@@ -2,11 +2,34 @@ import mongoose from "mongoose";
 
 const packageSchema = new mongoose.Schema(
   {
+    packageId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+    },
     name: {
       type: String,
       required: true,
       unique: true,
       trim: true,
+    },
+    category: {
+      type: String,
+      enum: ["Student", "Personal", "Business", "General"],
+      default: "General",
+    },
+    durationMonths: {
+      type: Number,
+      default: 12,
+    },
+    lockInDays: {
+      type: Number,
+      default: 365,
+    },
+    confirmationStatus: {
+      type: String,
+      default: "REQUIRES_CLIENT_CONFIRMATION",
     },
     price: {
       type: Number,

@@ -23,11 +23,25 @@ const router = express.Router();
 router.use(protect);
 router.use(restrictTo("admin", "superadmin"));
 
+import {
+  getKycQueue,
+  getMemberKycDetails,
+  previewCandidateDocument,
+  startKycReview,
+  submitKycDecision,
+} from "../controllers/kycController.js";
+
 router.get("/users", getAllUsers);
 router.put("/users/status", updateUserStatus);
 router.put("/users/:userId", editUser);
 router.delete("/users/:userId", deleteUser);
-router.post("/kyc/review", reviewKyc);
+
+// Phase 2 Admin KYC Management
+router.get("/kyc/queue", getKycQueue);
+router.get("/kyc/:userId", getMemberKycDetails);
+router.get("/kyc/:userId/document/:docType", previewCandidateDocument);
+router.post("/kyc/start-review", startKycReview);
+router.post("/kyc/review", submitKycDecision);
 
 router.get("/withdrawals", getAllWithdrawals);
 router.post("/withdrawals/review", updateWithdrawalStatus);

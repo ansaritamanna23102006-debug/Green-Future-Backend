@@ -9,4 +9,14 @@ export class AppError extends Error {
   }
 }
 
+export class UnconfirmedBusinessRuleError extends AppError {
+  constructor(message, details = {}) {
+    super(message, 400);
+    this.name = "UnconfirmedBusinessRuleError";
+    this.code = "UNCONFIRMED_BUSINESS_RULE";
+    this.details = details;
+  }
+}
+
 export default AppError;
+

@@ -25,10 +25,11 @@ if (smtpHost && smtpUser && smtpPass) {
   // Mock transporter
   transporter = {
     sendMail: async (mailOptions) => {
-      logger.info(`[MOCK EMAIL SENT]
-To: ${mailOptions.to}
-Subject: ${mailOptions.subject}
-HTML: ${mailOptions.html.substring(0, 200)}...`);
+      if (process.env.NODE_ENV === "production") {
+        logger.info(`[MOCK EMAIL DISPATCHED] To: ${mailOptions.to} Subject: ${mailOptions.subject}`);
+      } else {
+        logger.info(`[MOCK EMAIL SENT] To: ${mailOptions.to} Subject: ${mailOptions.subject}`);
+      }
       return { messageId: "mock-id-" + Date.now() };
     },
   };
