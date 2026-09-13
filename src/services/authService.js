@@ -131,10 +131,12 @@ class AuthService {
   }
 
   async login(emailOrUserId, password) {
+    const cleanId = (emailOrUserId || "").trim();
+    const cleanPass = (password || "").trim();
     const user = await User.findOne({
       $or: [
-        { email: emailOrUserId.toLowerCase() },
-        { userId: emailOrUserId.toUpperCase() },
+        { email: cleanId.toLowerCase() },
+        { userId: cleanId.toUpperCase() },
       ],
     });
     if (!user) {
@@ -145,7 +147,7 @@ class AuthService {
       throw new AppError("Your account has been suspended. Please contact support.", 403);
     }
 
-    const isMatch = await user.matchPassword(password);
+    const isMatch = await user.matchPassword(cleanPass);
     if (!isMatch) {
       throw new AppError("Invalid credentials", 401);
     }
