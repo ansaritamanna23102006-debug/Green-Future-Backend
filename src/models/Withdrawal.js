@@ -1,45 +1,156 @@
 import mongoose from "mongoose";
+import { WITHDRAWAL_STATUS, DESTINATION_TYPES } from "../services/withdrawal/withdrawalConstants.js";
 
 const withdrawalSchema = new mongoose.Schema(
   {
+    userId: {
+      type: String,
+      required: true,
+      index: true,
+    },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    userId: {
-      type: String,
-      required: true,
-    },
-    amount: {
+    amountPaisa: {
       type: Number,
       required: true,
       min: 1,
+      validate: {
+        validator: Number.isInteger,
+        message: "amountPaisa must be an exact integer.",
+      },
     },
-    paymentMethod: {
+    feePaisa: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+      validate: {
+        validator: Number.isInteger,
+        message: "feePaisa must be an exact integer.",
+      },
+    },
+    netAmountPaisa: {
+      type: Number,
+      required: true,
+      min: 1,
+      validate: {
+        validator: Number.isInteger,
+        message: "netAmountPaisa must be an exact integer.",
+      },
+    },
+    currency: {
       type: String,
-      enum: ["USDT_WALLET", "BANK_TRANSFER"],
+      default: "INR",
+      enum: ["INR"],
+    },
+    destinationType: {
+      type: String,
+      enum: Object.values(DESTINATION_TYPES),
       required: true,
     },
-    details: {
-      type: String, // Stringified bank details or USDT address
+    destinationReference: {
+      type: String,
       required: true,
+      trim: true,
     },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected", "cancelled"],
-      default: "pending",
+      enum: Object.values(WITHDRAWAL_STATUS),
+      default: WITHDRAWAL_STATUS.REQUESTED,
+      index: true,
     },
-    rejectReason: {
+    idempotencyKey: {
       type: String,
-      default: "",
+      required: true,
+      unique: true,
+      trim: true,
     },
-    txHash: {
-      type: String, // Transaction hash for blockchain transfers
-      default: "",
+    referenceId: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
     },
-    processedAt: {
+    holdJournalId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "JournalEntry",
+      required: true,
+    },
+    settlementJournalId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "JournalEntry",
+      default: null,
+    },
+    reversalJournalId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "JournalEntry",
+      default: null,
+    },
+    providerReference: {
+      type: String,
+      default: null,
+    },
+    failureReason: {
+      type: String,
+      default: null,
+    },
+    rejectionReason: {
+      type: String,
+      default: null,
+    },
+    ruleVersion: {
+      type: String,
+      required: true,
+    },
+    calculationSnapshot: {
+      grossAmountPaisa: { type: Number, required: true },
+      feePercentage: { type: Number, required: true },
+      feePaisa: { type: Number, required: true },
+      netAmountPaisa: { type: Number, required: true },
+      currency: { type: String, default: "INR" },
+    },
+    requestedAt: {
       type: Date,
+      default: Date.now,
+    },
+    reviewedAt: {
+      type: Date,
+      default: null,
+    },
+    reviewedBy: {
+      type: String,
+      default: null,
+    },
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+    approvedBy: {
+      type: String,
+      default: null,
+    },
+    processingAt: {
+      type: Date,
+      default: null,
+    },
+    completedAt: {
+      type: Date,
+      default: null,
+    },
+    rejectedAt: {
+      type: Date,
+      default: null,
+    },
+    rejectedBy: {
+      type: String,
+      default: null,
+    },
+    failedAt: {
+      type: Date,
+      default: null,
     },
   },
   {
@@ -47,5 +158,16 @@ const withdrawalSchema = new mongoose.Schema(
   }
 );
 
-const Withdrawal = mongoose.model("Withdrawal", withdrawalSchema);
+// Compound index for user query sorting
+withdrawalSchema.index({ userId: 1, createdAt: -1 });
+
+// Prevent accidental deletion or mutation of historical financial records
+withdrawalSchema.pre("deleteOne", function () {
+  throw new Error("Financial Withdrawal records are immutable and cannot be deleted.");
+});
+withdrawalSchema.pre("deleteMany", function () {
+  throw new Error("Financial Withdrawal records are immutable and cannot be deleted.");
+});
+
+const Withdrawal = mongoose.models.Withdrawal || mongoose.model("Withdrawal", withdrawalSchema);
 export default Withdrawal;

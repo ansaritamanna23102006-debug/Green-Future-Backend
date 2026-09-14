@@ -1,12 +1,27 @@
 import express from "express";
-import { getDownlineTree, getTreeStats } from "../controllers/genealogyController.js";
-import { protect } from "../middlewares/auth.js";
+import {
+  getBinaryTree,
+  getSponsorTree,
+  getDirectReferrals,
+  getSponsorInfo,
+  getTreeStats,
+  getIntegrityReport,
+} from "../controllers/genealogyController.js";
+import { protect, restrictTo } from "../middlewares/auth.js";
 
 const router = express.Router();
 
 router.use(protect);
 
-router.get("/tree", getDownlineTree);
+// Member-facing authorized endpoints
+router.get("/binary-tree", getBinaryTree);
+router.get("/tree", getBinaryTree); // Backward compatibility alias
+router.get("/sponsor-tree", getSponsorTree);
+router.get("/direct-referrals", getDirectReferrals);
+router.get("/sponsor-info", getSponsorInfo);
 router.get("/stats", getTreeStats);
+
+// Admin / Super Admin inspection endpoint
+router.get("/integrity", restrictTo("admin", "superadmin"), getIntegrityReport);
 
 export default router;

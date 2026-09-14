@@ -20,6 +20,8 @@ import walletRoutes from "./routes/walletRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import superadminRoutes from "./routes/superadminRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
+import incomeRoutes from "./routes/incomeRoutes.js";
+import withdrawalRoutes from "./routes/withdrawalRoutes.js";
 
 const app = express();
 
@@ -96,6 +98,8 @@ app.use("/api/v1/wallet", walletRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/superadmin", superadminRoutes);
 app.use("/api/v1/orders", orderRoutes);
+app.use("/api/v1/income", incomeRoutes);
+app.use("/api/v1/withdrawals", withdrawalRoutes);
 
 // 8. Health Check Endpoint
 app.get("/api/v1/health", (req, res) => {

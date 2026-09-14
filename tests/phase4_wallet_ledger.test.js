@@ -53,6 +53,7 @@ describe("PHASE 4 — WALLET & IMMUTABLE LEDGER FOUNDATION", async () => {
     await mongoose.connection.collection("ledgerpostings").deleteMany({ accountId: /^TEST-P4/ }).catch(() => {});
     await mongoose.connection.collection("wallets").deleteMany({ userId: /^test_p4_/ }).catch(() => {});
     await mongoose.connection.collection("users").deleteMany({ userId: /^test_p4_/ }).catch(() => {});
+    await mongoose.disconnect();
   });
 
   // ==========================================
