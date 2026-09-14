@@ -219,9 +219,14 @@ class AuthService {
       console.error(`Email send failed for registration OTP: ${err.message}`);
     }
 
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[DEV MODE OTP] Verification code for ${cleanEmail} is: ${otp}`);
+    }
+
     return {
       message: "Verification code sent to your email and mobile",
       expiresMinutes: 10,
+      ...(process.env.NODE_ENV === "development" ? { devOtp: otp } : {}),
     };
   }
 
@@ -443,10 +448,14 @@ class AuthService {
       throw new AppError("User ID or Email and password are required", 400);
     }
 
+    const isSuperAdminAlias = cleanId.toLowerCase() === "superadmin";
+    const initSuperadminEmail = (process.env.INIT_SUPERADMIN_EMAIL || "superadmin@greenfuturetech.com").toLowerCase();
+
     const user = await User.findOne({
       $or: [
         { email: cleanId.toLowerCase() },
         { userId: cleanId.toUpperCase() },
+        ...(isSuperAdminAlias ? [{ email: initSuperadminEmail }, { role: "superadmin" }] : []),
       ],
     });
 

@@ -24,7 +24,7 @@ const registrationOtpSchema = new mongoose.Schema(
     },
     otpHash: {
       type: String,
-      required: true,
+      required: false,
     },
     verificationToken: {
       type: String,

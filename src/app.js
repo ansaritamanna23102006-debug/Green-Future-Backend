@@ -58,7 +58,9 @@ app.use(
       // Allow requests with no origin (like mobile apps or curl)
       if (!origin) return callback(null, true);
       
+      const isLocalhost = /^http:\/\/(localhost|127\.0\.0\.1):[0-9]+$/.test(origin);
       const isAllowed = allowedOrigins.includes(origin) || 
+                        isLocalhost ||
                         origin.endsWith(".vercel.app");
       
       if (isAllowed) {
@@ -74,7 +76,7 @@ app.use(
 // 4. Rate Limiter (Limit excessive requests to prevent brute-force)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per window
+  max: process.env.NODE_ENV === "development" ? 2000 : 100, // Generous in development, strict in production
   message: "Too many requests from this IP, please try again after 15 minutes",
 });
 app.use("/api/", limiter);
