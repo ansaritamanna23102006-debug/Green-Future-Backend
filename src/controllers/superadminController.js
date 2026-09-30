@@ -105,6 +105,53 @@ export const getAdmins = async (req, res, next) => {
   }
 };
 
+export const updateAdminUser = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const { name, email, mobile, status, permissions } = req.body;
+    const admin = await User.findOne({ userId, role: "admin" });
+    if (!admin) throw new AppError("Admin not found", 404);
+
+    if (name) admin.name = name;
+    if (email) admin.email = email;
+    if (mobile) admin.mobile = mobile;
+    if (status && ["active", "suspended", "inactive"].includes(status)) admin.status = status;
+    if (permissions) admin.permissions = permissions;
+
+    await admin.save();
+    return successResponse(res, admin, "Administrator updated successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteAdminUser = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const admin = await User.findOneAndDelete({ userId, role: "admin" });
+    if (!admin) throw new AppError("Admin not found", 404);
+
+    return successResponse(res, null, "Administrator deleted successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const toggleAdminStatus = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const admin = await User.findOne({ userId, role: "admin" });
+    if (!admin) throw new AppError("Admin not found", 404);
+
+    admin.status = admin.status === "active" ? "suspended" : "active";
+    await admin.save();
+
+    return successResponse(res, admin, `Admin status changed to ${admin.status}`);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getAuditLogs = async (req, res, next) => {
   try {
     const logs = await AuditLog.find().sort({ createdAt: -1 }).limit(100);

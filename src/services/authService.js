@@ -448,14 +448,18 @@ class AuthService {
       throw new AppError("User ID or Email and password are required", 400);
     }
 
-    const isSuperAdminAlias = cleanId.toLowerCase() === "superadmin";
-    const initSuperadminEmail = (process.env.INIT_SUPERADMIN_EMAIL || "superadmin@greenfuturetech.com").toLowerCase();
+    const cleanLower = cleanId.toLowerCase();
+    const isSuperAdminAlias = cleanLower === "superadmin";
+    const isAdminAlias = cleanLower === "admin";
+    const initSuperadminEmail = (process.env.INIT_SUPERADMIN_EMAIL || "superadmin@gft.com").toLowerCase();
+    const initAdminEmail = (process.env.INIT_ADMIN_EMAIL || "admin@gft.com").toLowerCase();
 
     const user = await User.findOne({
       $or: [
-        { email: cleanId.toLowerCase() },
+        { email: cleanLower },
         { userId: cleanId.toUpperCase() },
         ...(isSuperAdminAlias ? [{ email: initSuperadminEmail }, { role: "superadmin" }] : []),
+        ...(isAdminAlias ? [{ email: initAdminEmail }, { role: "admin" }] : []),
       ],
     });
 

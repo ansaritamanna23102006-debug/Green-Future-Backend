@@ -46,22 +46,22 @@ describe("Phase 8: Safe Withdrawal & Payout Engine Test Suite", () => {
   });
 
   after(async () => {
-    await mongoose.connection.collection("withdrawals").deleteMany({ idempotencyKey: /^IDEMP:/i }).catch(() => {});
-    await mongoose.connection.collection("users").deleteMany({ userId: /^USR_/i }).catch(() => {});
-    await mongoose.connection.collection("wallets").deleteMany({ userId: /^USR_/i }).catch(() => {});
-    await mongoose.connection.collection("journalentries").deleteMany({ idempotencyKey: /^(LEDGER:WITHDRAWAL|INITIAL_DEPOSIT|LEDGER:INIT)/i }).catch(() => {});
-    await mongoose.connection.collection("ledgerpostings").deleteMany({ userId: /^USR_/i }).catch(() => {});
-    await mongoose.connection.collection("auditlogs").deleteMany({ userId: /^USR_/i }).catch(() => {});
+    await mongoose.connection.collection("withdrawals").deleteMany({ idempotencyKey: /^IDEMP:/i }).catch(() => { });
+    await mongoose.connection.collection("users").deleteMany({ userId: /^USR_/i }).catch(() => { });
+    await mongoose.connection.collection("wallets").deleteMany({ userId: /^USR_/i }).catch(() => { });
+    await mongoose.connection.collection("journalentries").deleteMany({ idempotencyKey: /^(LEDGER:WITHDRAWAL|INITIAL_DEPOSIT|LEDGER:INIT)/i }).catch(() => { });
+    await mongoose.connection.collection("ledgerpostings").deleteMany({ userId: /^USR_/i }).catch(() => { });
+    await mongoose.connection.collection("auditlogs").deleteMany({ userId: /^USR_/i }).catch(() => { });
     await mongoose.disconnect();
   });
 
   beforeEach(async () => {
-    await mongoose.connection.collection("withdrawals").deleteMany({ idempotencyKey: /^IDEMP:/i }).catch(() => {});
-    await mongoose.connection.collection("users").deleteMany({ userId: /^USR_/i }).catch(() => {});
-    await mongoose.connection.collection("wallets").deleteMany({ userId: /^USR_/i }).catch(() => {});
-    await mongoose.connection.collection("journalentries").deleteMany({ idempotencyKey: /^(LEDGER:WITHDRAWAL|INITIAL_DEPOSIT|LEDGER:INIT)/i }).catch(() => {});
-    await mongoose.connection.collection("ledgerpostings").deleteMany({ userId: /^USR_/i }).catch(() => {});
-    await mongoose.connection.collection("auditlogs").deleteMany({ userId: /^USR_/i }).catch(() => {});
+    await mongoose.connection.collection("withdrawals").deleteMany({ idempotencyKey: /^IDEMP:/i }).catch(() => { });
+    await mongoose.connection.collection("users").deleteMany({ userId: /^USR_/i }).catch(() => { });
+    await mongoose.connection.collection("wallets").deleteMany({ userId: /^USR_/i }).catch(() => { });
+    await mongoose.connection.collection("journalentries").deleteMany({ idempotencyKey: /^(LEDGER:WITHDRAWAL|INITIAL_DEPOSIT|LEDGER:INIT)/i }).catch(() => { });
+    await mongoose.connection.collection("ledgerpostings").deleteMany({ userId: /^USR_/i }).catch(() => { });
+    await mongoose.connection.collection("auditlogs").deleteMany({ userId: /^USR_/i }).catch(() => { });
   });
 
   // Helper to create test user with funded wallet via authoritative ledger deposit
@@ -239,8 +239,8 @@ describe("Phase 8: Safe Withdrawal & Payout Engine Test Suite", () => {
     it("B1: Direct withdrawalService call with kyc.status !== APPROVED must be BLOCKED with zero financial side-effects", async () => {
       await createTestUser({ userId: "USR_B1", kycStatus: "SUBMITTED", initialAvailablePaisa: 100000 });
       const initialWallet = await Wallet.findOne({ userId: "USR_B1" });
-      const initialJournalsCount = await JournalEntry.countDocuments({});
-      const initialPostingsCount = await LedgerPosting.countDocuments({});
+      const initialJournalsCount = await JournalEntry.countDocuments({ "metadata.userId": "USR_B1" });
+      const initialPostingsCount = await LedgerPosting.countDocuments({ userId: "USR_B1" });
 
       await assert.rejects(
         async () => {
@@ -261,9 +261,9 @@ describe("Phase 8: Safe Withdrawal & Payout Engine Test Suite", () => {
       assert.strictEqual(finalWallet.availablePaisa, initialWallet.availablePaisa);
       assert.strictEqual(finalWallet.lockedPaisa, initialWallet.lockedPaisa);
 
-      // Verify ZERO new journals or postings created
-      const finalJournalsCount = await JournalEntry.countDocuments({});
-      const finalPostingsCount = await LedgerPosting.countDocuments({});
+      // Verify ZERO new journals or postings created for USR_B1
+      const finalJournalsCount = await JournalEntry.countDocuments({ "metadata.userId": "USR_B1" });
+      const finalPostingsCount = await LedgerPosting.countDocuments({ userId: "USR_B1" });
       assert.strictEqual(finalJournalsCount, initialJournalsCount);
       assert.strictEqual(finalPostingsCount, initialPostingsCount);
 

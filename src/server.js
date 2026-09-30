@@ -49,24 +49,47 @@ const seedSystem = async () => {
       logger.info("[SEED] Seeding GFT MLM packages (GFT-1 to GFT-8) complete");
     }
 
-    // C. Seed Initial Super Admin
+    // C. Seed Initial Super Admin and Admin
     const superAdminExists = await User.findOne({ role: "superadmin" });
     if (!superAdminExists) {
-      const initEmail = process.env.INIT_SUPERADMIN_EMAIL || "superadmin@greenfuturetech.com";
-      const initPass = process.env.INIT_SUPERADMIN_PASS || "AdminPass123!";
+      const initEmail = process.env.INIT_SUPERADMIN_EMAIL || "superadmin@gft.com";
+      const initPass = process.env.INIT_SUPERADMIN_PASS || "admin123";
       
       await User.create({
         userId: "GFT000001",
         sponsorId: "none",
         name: "GFT Super Admin",
         email: initEmail,
-        mobile: "0000000000",
+        mobile: "9999999991",
         password: initPass,
         role: "superadmin",
         status: "active",
         referralCode: "SUPERADMIN",
+        isEmailVerified: true,
+        isMobileVerified: true,
       });
       logger.info(`[SEED] Super Admin GFT000001 seeded successfully. Email: ${initEmail}`);
+    }
+
+    const adminExists = await User.findOne({ role: "admin" });
+    if (!adminExists) {
+      const initAdminEmail = process.env.INIT_ADMIN_EMAIL || "admin@gft.com";
+      const initAdminPass = process.env.INIT_ADMIN_PASS || "admin123";
+      
+      await User.create({
+        userId: "GFT000002",
+        sponsorId: "none",
+        name: "GFT System Admin",
+        email: initAdminEmail,
+        mobile: "9999999992",
+        password: initAdminPass,
+        role: "admin",
+        status: "active",
+        referralCode: "ADMIN",
+        isEmailVerified: true,
+        isMobileVerified: true,
+      });
+      logger.info(`[SEED] Admin GFT000002 seeded successfully. Email: ${initAdminEmail}`);
     }
   } catch (err) {
     logger.error(`[SEED ERROR] Failed to seed default system: ${err.message}`);

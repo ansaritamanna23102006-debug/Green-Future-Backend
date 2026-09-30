@@ -5,6 +5,9 @@ import {
   updateSettings,
   createAdminUser,
   getAdmins,
+  updateAdminUser,
+  deleteAdminUser,
+  toggleAdminStatus,
   getAuditLogs,
   getSystemLogFiles,
   triggerBinaryMatchingCalculation,
@@ -23,6 +26,9 @@ router.put("/settings", updateSettings);
 
 router.post("/admins", createAdminUser);
 router.get("/admins", getAdmins);
+router.put("/admins/:userId", updateAdminUser);
+router.delete("/admins/:userId", deleteAdminUser);
+router.put("/admins/:userId/status", toggleAdminStatus);
 
 router.get("/audit-logs", getAuditLogs);
 router.get("/system-logs", getSystemLogFiles);
