@@ -25,6 +25,9 @@ import withdrawalRoutes from "./routes/withdrawalRoutes.js";
 
 const app = express();
 
+// Enable trust proxy for reverse proxies (Nginx, Cloudflare, AWS ALB)
+app.set("trust proxy", 1);
+
 // 1. Logging Middleware (Morgan streaming into Winston)
 app.use(
   morgan(":method :url :status :res[content-length] - :response-time ms", {
@@ -48,36 +51,65 @@ const allowedOrigins = [
   "http://127.0.0.1:3000",
 ];
 
-if (process.env.FRONTEND_URL) {
-  allowedOrigins.push(process.env.FRONTEND_URL);
-}
+// Helper to append comma-separated or single URLs
+const addAllowedOrigins = (envVal) => {
+  if (!envVal) return;
+  envVal.split(",").forEach((origin) => {
+    const trimmed = origin.trim();
+    if (trimmed && !allowedOrigins.includes(trimmed)) {
+      allowedOrigins.push(trimmed);
+    }
+  });
+};
+
+addAllowedOrigins(process.env.FRONTEND_URL);
+addAllowedOrigins(process.env.ALLOWED_ORIGINS);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl)
+      // Allow requests with no origin (e.g. mobile apps, server-to-server, curl)
       if (!origin) return callback(null, true);
       
       const isLocalhost = /^http:\/\/(localhost|127\.0\.0\.1):[0-9]+$/.test(origin);
-      const isAllowed = allowedOrigins.includes(origin) || 
-                        isLocalhost ||
-                        origin.endsWith(".vercel.app");
+      const isAllowed =
+        allowedOrigins.includes(origin) ||
+        isLocalhost ||
+        origin.endsWith(".vercel.app");
       
       if (isAllowed) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
       }
     },
     credentials: true,
   })
 );
 
-// 4. Rate Limiter (Limit excessive requests to prevent brute-force)
+// Health check endpoint for uptime monitors, Docker, and Nginx probes
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+    environment: process.env.NODE_ENV || "development",
+  });
+});
+
+// 4. Rate Limiter (Limit excessive requests to prevent brute-force and DoS)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === "development" ? 2000 : 100, // Generous in development, strict in production
-  message: "Too many requests from this IP, please try again after 15 minutes",
+  max: parseInt(
+    process.env.RATE_LIMIT_MAX || (process.env.NODE_ENV === "development" ? 2000 : 1000),
+    10
+  ),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    status: "fail",
+    message: "Too many requests from this IP, please try again after 15 minutes",
+  },
 });
 app.use("/api/", limiter);
 

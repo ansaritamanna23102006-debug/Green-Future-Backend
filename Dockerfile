@@ -1,23 +1,35 @@
-# Use base official Node.js Alpine image for production efficiency
-FROM node:20-alpine
+# ==============================================================================
+# Green Future Tech (GFT) - Backend Production Dockerfile
+# ==============================================================================
+FROM node:20-alpine AS base
 
-# Set working directory
+# Install curl for health check
+RUN apk add --no-cache curl
+
 WORKDIR /app
 
-# Copy dependency configs
+# Copy package descriptors
 COPY package*.json ./
 
 # Install production dependencies
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
-# Copy rest of the application files
+# Copy application source code
 COPY . .
 
-# Expose backend port
+# Create logs directory
+RUN mkdir -p logs uploads
+
+# Non-root user for security
+USER node
+
 EXPOSE 5000
 
-# Set environment variable
-ENV NODE_ENV=production
+ENV PORT=5000 \
+    NODE_ENV=production
 
-# Start command
+# Health check against Express /health
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:5000/health || exit 1
+
 CMD ["node", "src/server.js"]

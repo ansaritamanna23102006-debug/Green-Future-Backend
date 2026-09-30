@@ -81,6 +81,31 @@ server.listen(PORT, () => {
   logger.info(`GFT Web Server started running on port ${PORT}`);
 });
 
+// Graceful shutdown helper
+const gracefulShutdown = (signal) => {
+  logger.info(`[SHUTDOWN] Received ${signal}. Closing server gracefully...`);
+  server.close(async () => {
+    logger.info("[SHUTDOWN] HTTP/WebSocket server closed.");
+    try {
+      const mongoose = (await import("mongoose")).default;
+      await mongoose.connection.close(false);
+      logger.info("[SHUTDOWN] MongoDB connection closed.");
+    } catch (e) {
+      logger.error(`[SHUTDOWN ERROR] ${e.message}`);
+    }
+    process.exit(0);
+  });
+
+  // Force close after 10s timeout
+  setTimeout(() => {
+    logger.error("[SHUTDOWN] Forcing shutdown after timeout.");
+    process.exit(1);
+  }, 10000);
+};
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err, promise) => {
   logger.error(`Unhandled Rejection: ${err.message}`);
