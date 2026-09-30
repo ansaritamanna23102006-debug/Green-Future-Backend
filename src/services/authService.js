@@ -633,7 +633,14 @@ class AuthService {
       console.error(`Forgot password email failed: ${err.message}`);
     }
 
-    return { message: "If an account matches this email, a password reset code has been sent." };
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[DEV MODE RESET OTP] Password reset code for ${cleanEmail} is: ${otp}`);
+    }
+
+    return {
+      message: "If an account matches this email, a password reset code has been sent.",
+      ...(process.env.NODE_ENV === "development" ? { devOtp: otp } : {}),
+    };
   }
 
   /**
