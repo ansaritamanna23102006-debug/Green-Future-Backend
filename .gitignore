@@ -13,3 +13,16 @@ logs/
 # Local uploaded files
 uploads/*
 !uploads/.gitkeep
+
+# PDF Documents
+*.pdf
+**/*.pdf
+
+# Test Suites & Test Scripts
+tests/
+*.test.js
+*.spec.js
+test_*.js
+temp_*.js
+temp_*.mjs
+test_email.js

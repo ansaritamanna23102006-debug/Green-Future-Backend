@@ -20,7 +20,7 @@ import Transaction from "../models/Transaction.js";
 import RegistrationOtp from "../models/RegistrationOtp.js";
 import GenealogyService from "./genealogyService.js";
 import AppError from "../utils/errors.js";
-import sendEmail from "../config/mailer.js";
+import sendEmail, { getMailerConfig } from "../config/mailer.js";
 
 class AuthService {
   // Helper to generate access token
@@ -198,16 +198,34 @@ class AuthService {
       { upsert: true, new: true }
     );
 
-    // Send email with OTP code (safe fallback logs to logger if SMTP not configured)
+    // Send email with OTP code
     try {
       const emailHtml = `
-        <div style="font-family: sans-serif; padding: 24px; color: #0E3B2E; max-width: 500px; border: 1px solid #C9A34A; border-radius: 12px;">
-          <h2 style="color: #0B5D43; margin-top: 0;">Green Future Tech — Registration Code</h2>
-          <p>Please use the following 6-digit verification code to complete your registration:</p>
-          <div style="font-size: 32px; font-weight: bold; letter-spacing: 6px; background: #F8F6F1; color: #0B5D43; padding: 16px; text-align: center; border-radius: 8px; margin: 20px 0; border: 1px dashed #C9A34A;">
-            ${otp}
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 32px; background-color: #F8F9FA; color: #1E293B;">
+          <div style="max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #E2E8F0;">
+            <div style="background: linear-gradient(135deg, #0B5D43 0%, #0E3B2E 100%); padding: 28px 24px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.5px;">Green Future Tech</h1>
+              <p style="color: #C9A34A; margin: 6px 0 0 0; font-size: 13px; font-weight: 500;">Sustainable Ecosystem & Innovation</p>
+            </div>
+            <div style="padding: 32px 28px;">
+              <h2 style="color: #0E3B2E; margin: 0 0 12px 0; font-size: 18px; font-weight: 600;">Registration Verification Code</h2>
+              <p style="color: #64748B; font-size: 14px; line-height: 1.6; margin: 0 0 24px 0;">
+                Thank you for joining Green Future Tech. Please enter the verification code below on the registration screen to confirm your email:
+              </p>
+              <div style="background: #F1F5F9; border: 2px dashed #0B5D43; border-radius: 12px; padding: 20px; text-align: center; margin: 0 0 24px 0;">
+                <span style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #0B5D43; display: block;">
+                  ${otp}
+                </span>
+                <span style="color: #64748B; font-size: 12px; margin-top: 8px; display: block;">Expires in 10 minutes</span>
+              </div>
+              <p style="color: #94A3B8; font-size: 12px; line-height: 1.5; margin: 0;">
+                If you did not request this verification code, please disregard this email or contact support if you suspect unauthorized activity.
+              </p>
+            </div>
+            <div style="background: #F8FAFC; padding: 16px 24px; text-align: center; border-top: 1px solid #E2E8F0; font-size: 11px; color: #94A3B8;">
+              © ${new Date().getFullYear()} Green Future Tech. All rights reserved.
+            </div>
           </div>
-          <p style="font-size: 13px; color: #666;">This code is single-use and will expire in 10 minutes. If you did not request this code, please ignore this email.</p>
         </div>
       `;
       await sendEmail({
@@ -217,16 +235,19 @@ class AuthService {
       });
     } catch (err) {
       console.error(`Email send failed for registration OTP: ${err.message}`);
+      const mailConfig = getMailerConfig();
+      if (mailConfig.isConfigured) {
+        throw new AppError(`Failed to send verification code to ${cleanEmail}: ${err.message}`, 500);
+      }
     }
 
     if (process.env.NODE_ENV === "development") {
-      console.log(`[DEV MODE OTP] Verification code for ${cleanEmail} is: ${otp}`);
+      console.log(`[SERVER LOG] Verification code for ${cleanEmail} is: ${otp}`);
     }
 
     return {
-      message: "Verification code sent to your email and mobile",
+      message: "Verification code sent to your email",
       expiresMinutes: 10,
-      ...(process.env.NODE_ENV === "development" ? { devOtp: otp } : {}),
     };
   }
 
@@ -619,13 +640,31 @@ class AuthService {
     // Dispatch email
     try {
       const emailHtml = `
-        <div style="font-family: sans-serif; padding: 24px; color: #0E3B2E; max-width: 500px; border: 1px solid #C9A34A; border-radius: 12px;">
-          <h2 style="color: #0B5D43;">Password Reset Code</h2>
-          <p>You requested a password reset for your GFT account. Use the following 6-digit code:</p>
-          <div style="font-size: 32px; font-weight: bold; letter-spacing: 6px; background: #F8F6F1; color: #0B5D43; padding: 16px; text-align: center; border-radius: 8px; margin: 20px 0; border: 1px dashed #C9A34A;">
-            ${otp}
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 32px; background-color: #F8F9FA; color: #1E293B;">
+          <div style="max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #E2E8F0;">
+            <div style="background: linear-gradient(135deg, #0B5D43 0%, #0E3B2E 100%); padding: 28px 24px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.5px;">Green Future Tech</h1>
+              <p style="color: #C9A34A; margin: 6px 0 0 0; font-size: 13px; font-weight: 500;">Account Security</p>
+            </div>
+            <div style="padding: 32px 28px;">
+              <h2 style="color: #0E3B2E; margin: 0 0 12px 0; font-size: 18px; font-weight: 600;">Password Reset Code</h2>
+              <p style="color: #64748B; font-size: 14px; line-height: 1.6; margin: 0 0 24px 0;">
+                You requested a password reset for your GFT account. Use the following 6-digit code to continue:
+              </p>
+              <div style="background: #F1F5F9; border: 2px dashed #0B5D43; border-radius: 12px; padding: 20px; text-align: center; margin: 0 0 24px 0;">
+                <span style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #0B5D43; display: block;">
+                  ${otp}
+                </span>
+                <span style="color: #64748B; font-size: 12px; margin-top: 8px; display: block;">Expires in 15 minutes</span>
+              </div>
+              <p style="color: #94A3B8; font-size: 12px; line-height: 1.5; margin: 0;">
+                If you did not request a password reset, please contact support immediately. Your password will remain unchanged.
+              </p>
+            </div>
+            <div style="background: #F8FAFC; padding: 16px 24px; text-align: center; border-top: 1px solid #E2E8F0; font-size: 11px; color: #94A3B8;">
+              © ${new Date().getFullYear()} Green Future Tech. All rights reserved.
+            </div>
           </div>
-          <p style="font-size: 13px; color: #666;">This code expires in 15 minutes. If you did not request this, please contact support immediately.</p>
         </div>
       `;
       await sendEmail({
@@ -635,15 +674,18 @@ class AuthService {
       });
     } catch (err) {
       console.error(`Forgot password email failed: ${err.message}`);
+      const mailConfig = getMailerConfig();
+      if (mailConfig.isConfigured) {
+        throw new AppError(`Failed to dispatch reset code email: ${err.message}`, 500);
+      }
     }
 
     if (process.env.NODE_ENV === "development") {
-      console.log(`[DEV MODE RESET OTP] Password reset code for ${cleanEmail} is: ${otp}`);
+      console.log(`[SERVER LOG] Password reset code for ${cleanEmail} is: ${otp}`);
     }
 
     return {
       message: "If an account matches this email, a password reset code has been sent.",
-      ...(process.env.NODE_ENV === "development" ? { devOtp: otp } : {}),
     };
   }
 
